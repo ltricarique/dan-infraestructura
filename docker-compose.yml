@@ -1,0 +1,121 @@
+version: "3.9"
+services:
+   postgres:
+      image: dan/postgres
+      container_name: dan-postgres
+      build:
+         context: postgres/
+         dockerfile: Dockerfile
+      restart: always
+      environment:
+         POSTGRES_USER: postgres
+         POSTGRES_PASSWORD: postgres
+         DAN_DB_NAME: dan_ms
+         DAN_DB_USER: dan_ms_user
+         DAN_DB_PASSWORD: dan_ms_1234
+      ports:
+         - 5432:5432
+      volumes:
+         - type: bind
+           source: D:\Facultad\DAN\TP\dan-infraestructura\postgres\data
+           target: /var/lib/postgresql/data
+#      healthcheck:
+#         test:
+#            [
+#               "CMD",
+#               "psql",
+#               "-U",
+#               "${APP_DB_USER}",
+#               "-h",
+#               "localhost",
+#               "-d",
+#               "${APP_DB_NAME}",
+#               "-p",
+#               "5432",
+#               "-c",
+#               "SELECT 1 AS result FROM pg_database WHERE datname='${APP_DB_NAME}'",
+#            ]
+#         interval: 30s
+#         timeout: 10s
+#         retries: 5
+   keycloak:
+      image: dan/keycloak
+      container_name: dan-keycloak
+      build:
+         context: keycloak/
+         dockerfile: Dockerfile
+      environment:
+         KEYCLOAK_USER: admin
+         KEYCLOAK_PASSWORD: admin
+#         PROXY_ADDRESS_FORWARDING: "true"
+#         KEYCLOAK_FRONTEND_URL: http://dan-gateway/auth
+         DB_VENDOR: postgres
+         DB_ADDR: postgres
+         DB_PORT: 5432
+         DB_DATABASE: dan_ms
+         DB_SCHEMA: keycloak
+         DB_USER: dan_ms_user
+         DB_PASSWORD: dan_ms_1234
+      ports:
+         - 8080:8080
+      depends_on:
+         - postgres
+   artemis:
+      image: dan/artemis
+      container_name: dan-artemis
+      build:
+         context: artemis/
+         dockerfile: Dockerfile
+      environment:
+         ARTEMIS_USERNAME: admin
+         ARTEMIS_PASSWORD: admin
+      ports:
+         - 8161:8161
+#         - 9404:9404
+#         - 61616:61616
+#         - 5445:5445
+#         - 5672:5672
+#         - 1883:1883
+#         - 61613:61613
+   dan-gateway:
+      image: dan/dan-gateway:0.0.1-SNAPSHOT
+      container_name: dan-gateway
+      ports:
+         - 80:80
+      volumes:
+         - type: bind
+           source: D:\Facultad\DAN\TP\dan-infraestructura\dan-gateway\logs
+           target: /logs
+      # links:
+         # - dan-ms-discovery
+      depends_on:
+         - dan-discovery
+#         - keycloak
+   dan-discovery:
+      image: dan/dan-discovery:0.0.1-SNAPSHOT
+      container_name: dan-discovery
+      ports:
+         - 8761:8761
+      volumes:
+         - type: bind
+           source: D:\Facultad\DAN\TP\dan-infraestructura\dan-discovery\logs
+           target: /logs
+   dan-ms-usuario:
+      image: dan/dan-ms-usuario:0.0.1-SNAPSHOT
+      container_name: dan-ms-usuario
+      volumes:
+         - type: bind
+           source: D:\Facultad\DAN\TP\dan-infraestructura\dan-ms-usuario\logs
+           target: /logs
+      depends_on:
+         - postgres
+         - keycloak
+         - dan-discovery
+         - dan-gateway
+
+
+
+#      volumes:
+#      /opt/jboss/keycloak/standalone/data/
+#volumes:
+#   D:\Facultad\DAN\TP\docker\postgres\data: {}
